@@ -1,113 +1,118 @@
 "use client";
 
-import { useState, useCallback, useRef } from "react";
+import { useCallback, lazy, Suspense, useRef, useEffect } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import LandingScreen from "@/components/LandingScreen";
 import CameraView from "@/components/CameraView";
 import FloatingHearts from "@/components/FloatingHearts";
-import HeartCanvas from "@/components/HeartCanvas";
 import ScreenGlow from "@/components/ScreenGlow";
-import { HeartParticle, createHeartBurst, createSparkle } from "@/utils/particles";
+import LoveParticles from "@/components/LoveParticles";
+import PhotoCapture from "@/components/PhotoCapture";
+import { useAppStore } from "@/lib/store";
 
-type AppScreen = "landing" | "camera";
+// Lazy load heavy 3D component
+const HeartExplosion3D = lazy(() => import("@/components/HeartExplosion3D"));
 
 export default function Home() {
-  const [screen, setScreen] = useState<AppScreen>("landing");
-  const [heartDetected, setHeartDetected] = useState(false);
-  const [particles, setParticles] = useState<HeartParticle[]>([]);
-  const [canvasParticles, setCanvasParticles] = useState<HeartParticle[]>([]);
-  const burstIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const screen = useAppStore((s) => s.screen);
+  const setScreen = useAppStore((s) => s.setScreen);
+  const reset = useAppStore((s) => s.reset);
+  const musicEnabled = useAppStore((s) => s.musicEnabled);
+  const gestureDetected = useAppStore((s) => s.gestureDetected);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
 
-  const startBursting = useCallback(() => {
-    // Initial large burst
-    setParticles((prev) => [...prev, ...createHeartBurst(30)]);
-    setCanvasParticles((prev) => [
-      ...prev,
-      ...createHeartBurst(15),
-      ...Array.from({ length: 20 }, () => createSparkle()),
-    ]);
+  // Background music management
+  useEffect(() => {
+    if (typeof window === "undefined") return;
 
-    // Continuous smaller bursts
-    burstIntervalRef.current = setInterval(() => {
-      setParticles((prev) => {
-        const trimmed = prev.length > 150 ? prev.slice(-100) : prev;
-        return [...trimmed, ...createHeartBurst(8)];
-      });
-      setCanvasParticles((prev) => {
-        const trimmed = prev.length > 100 ? prev.slice(-60) : prev;
-        return [
-          ...trimmed,
-          ...createHeartBurst(5),
-          ...Array.from({ length: 8 }, () => createSparkle()),
-        ];
-      });
-    }, 1200);
-  }, []);
+    if (musicEnabled && screen === "camera") {
+      if (!audioRef.current) {
+        // Use a royalty-free romantic tone via Web Audio API
+        const audioCtx = new AudioContext();
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        const filter = audioCtx.createBiquadFilter();
 
-  const stopBursting = useCallback(() => {
-    if (burstIntervalRef.current) {
-      clearInterval(burstIntervalRef.current);
-      burstIntervalRef.current = null;
+        osc.type = "sine";
+        osc.frequency.setValueAtTime(440, audioCtx.currentTime);
+        filter.type = "lowpass";
+        filter.frequency.setValueAtTime(600, audioCtx.currentTime);
+        gain.gain.setValueAtTime(0, audioCtx.currentTime);
+        gain.gain.linearRampToValueAtTime(0.03, audioCtx.currentTime + 2);
+
+        osc.connect(filter);
+        filter.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start();
+
+        // Store a ref to clean up
+        audioRef.current = { close: () => { gain.gain.linearRampToValueAtTime(0, audioCtx.currentTime + 0.5); setTimeout(() => { osc.stop(); audioCtx.close(); }, 600); } } as unknown as HTMLAudioElement;
+      }
+    } else {
+      if (audioRef.current) {
+        (audioRef.current as unknown as { close: () => void }).close();
+        audioRef.current = null;
+      }
     }
-  }, []);
 
-  const handleHeartDetected = useCallback(() => {
-    setHeartDetected(true);
-    startBursting();
-  }, [startBursting]);
-
-  const handleHeartLost = useCallback(() => {
-    setHeartDetected(false);
-    stopBursting();
-  }, [stopBursting]);
+    return () => {
+      if (audioRef.current) {
+        (audioRef.current as unknown as { close: () => void }).close();
+        audioRef.current = null;
+      }
+    };
+  }, [musicEnabled, screen]);
 
   const handleBack = useCallback(() => {
-    setScreen("landing");
-    setHeartDetected(false);
-    setParticles([]);
-    setCanvasParticles([]);
-    stopBursting();
-  }, [stopBursting]);
+    reset();
+  }, [reset]);
 
   return (
     <main className="relative h-screen w-screen overflow-hidden bg-[#0a0a0a]">
+      {/* Ambient particles — always visible */}
+      <LoveParticles />
+
       <AnimatePresence mode="wait">
         {screen === "landing" ? (
           <motion.div
             key="landing"
+            className="relative z-10"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            transition={{ duration: 0.5 }}
+            transition={{ duration: 0.6 }}
           >
             <LandingScreen onStart={() => setScreen("camera")} />
           </motion.div>
         ) : (
           <motion.div
             key="camera"
+            className="relative z-10"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            transition={{ duration: 0.5 }}
+            transition={{ duration: 0.6 }}
           >
-            <CameraView
-              heartDetected={heartDetected}
-              onHeartDetected={handleHeartDetected}
-              onHeartLost={handleHeartLost}
-              onBack={handleBack}
-            />
+            <CameraView onBack={handleBack} />
           </motion.div>
         )}
       </AnimatePresence>
 
-      {/* Floating Hearts (Framer Motion — DOM based) */}
-      <FloatingHearts particles={particles} />
+      {/* Effects layer — only when camera is active */}
+      {screen === "camera" && (
+        <>
+          <FloatingHearts />
 
-      {/* Heart Canvas (Canvas 2D — high performance) */}
-      <HeartCanvas particles={canvasParticles} active={heartDetected} />
+          <Suspense fallback={null}>
+            <HeartExplosion3D />
+          </Suspense>
 
-      {/* Screen glow effects */}
-      <ScreenGlow active={heartDetected} />
+          <ScreenGlow />
+        </>
+      )}
+
+      {/* Photo capture modal */}
+      <PhotoCapture />
     </main>
   );
 }

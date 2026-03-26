@@ -1,13 +1,12 @@
 "use client";
 
 import { useRef, useEffect, useState, useCallback } from "react";
-import { detectHeartGesture, GestureSmoother } from "@/utils/heartGesture";
+import { detectHeartGesture, GestureSmoother, GestureResult } from "@/utils/heartGesture";
+import { useAppStore, GestureType } from "@/lib/store";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
 interface UseHandGestureOptions {
-  onHeartDetected: () => void;
-  onHeartLost?: () => void;
   enabled: boolean;
 }
 
@@ -26,24 +25,18 @@ function loadScript(src: string): Promise<void> {
   });
 }
 
-export function useHandGesture({
-  onHeartDetected,
-  onHeartLost,
-  enabled,
-}: UseHandGestureOptions) {
+export function useHandGesture({ enabled }: UseHandGestureOptions) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const cameraRef = useRef<any>(null);
   const handsRef = useRef<any>(null);
-  const smootherRef = useRef(new GestureSmoother(10, 0.5));
+  const smootherRef = useRef(new GestureSmoother(10, 0.5, 800));
   const wasDetectedRef = useRef(false);
   const [isLoading, setIsLoading] = useState(true);
-  const [confidence, setConfidence] = useState(0);
-  const callbacksRef = useRef({ onHeartDetected, onHeartLost });
 
-  useEffect(() => {
-    callbacksRef.current = { onHeartDetected, onHeartLost };
-  }, [onHeartDetected, onHeartLost]);
+  const setGesture = useAppStore((s) => s.setGesture);
+  const triggerExplosion = useAppStore((s) => s.triggerExplosion);
+  const lastTypeRef = useRef<GestureType>("none");
 
   const onResults = useCallback((results: any) => {
     const canvas = canvasRef.current;
@@ -63,41 +56,42 @@ export function useHandGesture({
     ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
     ctx.restore();
 
-    if (results.multiHandLandmarks && results.multiHandLandmarks.length >= 2) {
+    if (results.multiHandLandmarks && results.multiHandLandmarks.length >= 1) {
+      // Draw subtle landmarks
       for (const landmarks of results.multiHandLandmarks) {
-        ctx.fillStyle = "rgba(251, 113, 133, 0.4)";
+        ctx.fillStyle = "rgba(251, 113, 133, 0.35)";
         for (const point of landmarks) {
           const x = canvas.width - point.x * canvas.width;
           const y = point.y * canvas.height;
           ctx.beginPath();
-          ctx.arc(x, y, 3, 0, 2 * Math.PI);
+          ctx.arc(x, y, 2.5, 0, 2 * Math.PI);
           ctx.fill();
         }
       }
 
-      const { detected, confidence: conf } = detectHeartGesture(
-        results.multiHandLandmarks
-      );
-      setConfidence(conf);
+      const result: GestureResult = detectHeartGesture(results.multiHandLandmarks);
+      setGesture(result.detected, result.type, result.confidence);
 
-      const smoothed = smootherRef.current.update(detected);
+      const smoothed = smootherRef.current.update(result.detected);
 
       if (smoothed && !wasDetectedRef.current) {
         wasDetectedRef.current = true;
-        callbacksRef.current.onHeartDetected();
+        lastTypeRef.current = result.type;
+        triggerExplosion();
       } else if (!smoothed && wasDetectedRef.current) {
         wasDetectedRef.current = false;
-        callbacksRef.current.onHeartLost?.();
+        lastTypeRef.current = "none";
+        setGesture(false, "none", 0);
       }
     } else {
-      setConfidence(0);
+      setGesture(false, "none", 0);
       const smoothed = smootherRef.current.update(false);
       if (!smoothed && wasDetectedRef.current) {
         wasDetectedRef.current = false;
-        callbacksRef.current.onHeartLost?.();
+        lastTypeRef.current = "none";
       }
     }
-  }, []);
+  }, [setGesture, triggerExplosion]);
 
   useEffect(() => {
     if (!enabled) return;
@@ -105,7 +99,6 @@ export function useHandGesture({
     let mounted = true;
 
     const init = async () => {
-      // Load MediaPipe scripts from CDN
       await loadScript(
         "https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js"
       );
@@ -162,5 +155,5 @@ export function useHandGesture({
     };
   }, [enabled, onResults]);
 
-  return { videoRef, canvasRef, isLoading, confidence };
+  return { videoRef, canvasRef, isLoading };
 }
