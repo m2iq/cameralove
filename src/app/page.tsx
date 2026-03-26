@@ -1,65 +1,113 @@
-import Image from "next/image";
+"use client";
+
+import { useState, useCallback, useRef } from "react";
+import { AnimatePresence, motion } from "framer-motion";
+import LandingScreen from "@/components/LandingScreen";
+import CameraView from "@/components/CameraView";
+import FloatingHearts from "@/components/FloatingHearts";
+import HeartCanvas from "@/components/HeartCanvas";
+import ScreenGlow from "@/components/ScreenGlow";
+import { HeartParticle, createHeartBurst, createSparkle } from "@/utils/particles";
+
+type AppScreen = "landing" | "camera";
 
 export default function Home() {
+  const [screen, setScreen] = useState<AppScreen>("landing");
+  const [heartDetected, setHeartDetected] = useState(false);
+  const [particles, setParticles] = useState<HeartParticle[]>([]);
+  const [canvasParticles, setCanvasParticles] = useState<HeartParticle[]>([]);
+  const burstIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const startBursting = useCallback(() => {
+    // Initial large burst
+    setParticles((prev) => [...prev, ...createHeartBurst(30)]);
+    setCanvasParticles((prev) => [
+      ...prev,
+      ...createHeartBurst(15),
+      ...Array.from({ length: 20 }, () => createSparkle()),
+    ]);
+
+    // Continuous smaller bursts
+    burstIntervalRef.current = setInterval(() => {
+      setParticles((prev) => {
+        const trimmed = prev.length > 150 ? prev.slice(-100) : prev;
+        return [...trimmed, ...createHeartBurst(8)];
+      });
+      setCanvasParticles((prev) => {
+        const trimmed = prev.length > 100 ? prev.slice(-60) : prev;
+        return [
+          ...trimmed,
+          ...createHeartBurst(5),
+          ...Array.from({ length: 8 }, () => createSparkle()),
+        ];
+      });
+    }, 1200);
+  }, []);
+
+  const stopBursting = useCallback(() => {
+    if (burstIntervalRef.current) {
+      clearInterval(burstIntervalRef.current);
+      burstIntervalRef.current = null;
+    }
+  }, []);
+
+  const handleHeartDetected = useCallback(() => {
+    setHeartDetected(true);
+    startBursting();
+  }, [startBursting]);
+
+  const handleHeartLost = useCallback(() => {
+    setHeartDetected(false);
+    stopBursting();
+  }, [stopBursting]);
+
+  const handleBack = useCallback(() => {
+    setScreen("landing");
+    setHeartDetected(false);
+    setParticles([]);
+    setCanvasParticles([]);
+    stopBursting();
+  }, [stopBursting]);
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
+    <main className="relative h-screen w-screen overflow-hidden bg-[#0a0a0a]">
+      <AnimatePresence mode="wait">
+        {screen === "landing" ? (
+          <motion.div
+            key="landing"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.5 }}
           >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
+            <LandingScreen onStart={() => setScreen("camera")} />
+          </motion.div>
+        ) : (
+          <motion.div
+            key="camera"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.5 }}
+          >
+            <CameraView
+              heartDetected={heartDetected}
+              onHeartDetected={handleHeartDetected}
+              onHeartLost={handleHeartLost}
+              onBack={handleBack}
             />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
-    </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Floating Hearts (Framer Motion — DOM based) */}
+      <FloatingHearts particles={particles} />
+
+      {/* Heart Canvas (Canvas 2D — high performance) */}
+      <HeartCanvas particles={canvasParticles} active={heartDetected} />
+
+      {/* Screen glow effects */}
+      <ScreenGlow active={heartDetected} />
+    </main>
   );
 }
