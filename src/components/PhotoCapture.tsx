@@ -113,7 +113,7 @@ export default function PhotoCapture() {
       ctx.font = "14px system-ui, sans-serif";
       ctx.fillStyle = "rgba(255,255,255,0.5)";
       ctx.textAlign = "left";
-      ctx.fillText("Camera Love", 16, canvas.height - 16);
+      ctx.fillText("CREATED BY Moamal", 16, canvas.height - 16);
     };
     img.src = capturedPhoto;
   }, [capturedPhoto]);

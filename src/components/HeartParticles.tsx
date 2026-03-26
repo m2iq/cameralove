@@ -8,6 +8,8 @@ const COLORS = [
   "#f9a8d4", "#f472b6", "#ec4899", "#c084fc", "#a855f7",
 ];
 
+const DUST_COLORS = ["#fda4af", "#fecdd3", "#fff1f2", "#c084fc", "#e9d5ff"];
+
 interface Heart {
   x: number;
   y: number;
@@ -24,6 +26,18 @@ interface Heart {
 }
 
 interface Spark {
+  x: number;
+  y: number;
+  vx: number;
+  vy: number;
+  size: number;
+  opacity: number;
+  life: number;
+  maxLife: number;
+  color: string;
+}
+
+interface Dust {
   x: number;
   y: number;
   vx: number;
@@ -75,61 +89,104 @@ export default function HeartParticles() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const heartsRef = useRef<Heart[]>([]);
   const sparksRef = useRef<Spark[]>([]);
+  const dustRef = useRef<Dust[]>([]);
   const animRef = useRef(0);
   const lastTimeRef = useRef(0);
   const continuousTimerRef = useRef(0);
 
   const explosionTrigger = useAppStore((s) => s.explosionTrigger);
+  const explosionX = useAppStore((s) => s.explosionX);
+  const explosionY = useAppStore((s) => s.explosionY);
   const gestureDetected = useAppStore((s) => s.gestureDetected);
+  const heartX = useAppStore((s) => s.heartX);
+  const heartY = useAppStore((s) => s.heartY);
   const lastTriggerRef = useRef(0);
   const gestureRef = useRef(false);
+  const heartPosRef = useRef({ x: 0.5, y: 0.5 });
+  const explosionPosRef = useRef({ x: 0, y: 0 });
 
   useEffect(() => {
     gestureRef.current = gestureDetected;
   }, [gestureDetected]);
 
-  // Burst on explosion trigger
+  useEffect(() => {
+    heartPosRef.current = { x: heartX, y: heartY };
+  }, [heartX, heartY]);
+
+  useEffect(() => {
+    explosionPosRef.current = { x: explosionX, y: explosionY };
+  }, [explosionX, explosionY]);
+
+  // Cinematic burst at explosion position
   useEffect(() => {
     if (explosionTrigger <= lastTriggerRef.current) return;
     lastTriggerRef.current = explosionTrigger;
 
     const canvas = canvasRef.current;
     if (!canvas) return;
-    const cx = canvas.width / 2;
-    const cy = canvas.height / 2;
 
-    for (let i = 0; i < 40; i++) {
+    // Use explosion position (screen pixels from hook) mapped to overlay canvas
+    const cx = explosionPosRef.current.x
+      ? (explosionPosRef.current.x / 640) * canvas.width
+      : canvas.width / 2;
+    const cy = explosionPosRef.current.y
+      ? (explosionPosRef.current.y / 480) * canvas.height
+      : canvas.height / 2;
+
+    // Big burst: 50 hearts
+    for (let i = 0; i < 50; i++) {
       const angle = Math.random() * Math.PI * 2;
-      const speed = 1.5 + Math.random() * 4;
+      const speed = 1.5 + Math.random() * 5;
+      const life = 2.5 + Math.random() * 2.5;
       heartsRef.current.push({
-        x: cx + (Math.random() - 0.5) * 60,
-        y: cy + (Math.random() - 0.5) * 60,
+        x: cx + (Math.random() - 0.5) * 50,
+        y: cy + (Math.random() - 0.5) * 50,
         vx: Math.cos(angle) * speed,
-        vy: Math.sin(angle) * speed - 1.5,
-        size: 8 + Math.random() * 26,
+        vy: Math.sin(angle) * speed - 2,
+        size: 6 + Math.random() * 30,
         color: COLORS[Math.floor(Math.random() * COLORS.length)],
-        opacity: 0.7 + Math.random() * 0.3,
+        opacity: 0.75 + Math.random() * 0.25,
         rotation: (Math.random() - 0.5) * 0.6,
-        rotSpeed: (Math.random() - 0.5) * 0.02,
-        life: 3 + Math.random() * 2,
-        maxLife: 3 + Math.random() * 2,
-        glow: 6 + Math.random() * 14,
+        rotSpeed: (Math.random() - 0.5) * 0.025,
+        life,
+        maxLife: life,
+        glow: 8 + Math.random() * 16,
       });
     }
 
-    for (let i = 0; i < 25; i++) {
+    // Spark burst: 35 sparks
+    for (let i = 0; i < 35; i++) {
       const angle = Math.random() * Math.PI * 2;
-      const speed = 3 + Math.random() * 7;
+      const speed = 3 + Math.random() * 8;
+      const life = 0.5 + Math.random() * 1.2;
       sparksRef.current.push({
-        x: cx + (Math.random() - 0.5) * 30,
-        y: cy + (Math.random() - 0.5) * 30,
+        x: cx + (Math.random() - 0.5) * 20,
+        y: cy + (Math.random() - 0.5) * 20,
         vx: Math.cos(angle) * speed,
         vy: Math.sin(angle) * speed,
-        size: 1 + Math.random() * 3,
-        opacity: 0.7 + Math.random() * 0.3,
-        life: 0.6 + Math.random() * 1,
-        maxLife: 0.6 + Math.random() * 1,
-        color: Math.random() > 0.4 ? "#fda4af" : "#ffffff",
+        size: 1 + Math.random() * 3.5,
+        opacity: 0.8 + Math.random() * 0.2,
+        life,
+        maxLife: life,
+        color: Math.random() > 0.3 ? "#fda4af" : "#ffffff",
+      });
+    }
+
+    // Light dust burst: 20 particles
+    for (let i = 0; i < 20; i++) {
+      const angle = Math.random() * Math.PI * 2;
+      const speed = 0.5 + Math.random() * 2;
+      const life = 2 + Math.random() * 3;
+      dustRef.current.push({
+        x: cx + (Math.random() - 0.5) * 80,
+        y: cy + (Math.random() - 0.5) * 80,
+        vx: Math.cos(angle) * speed,
+        vy: Math.sin(angle) * speed - 0.3,
+        size: 2 + Math.random() * 5,
+        opacity: 0.3 + Math.random() * 0.3,
+        life,
+        maxLife: life,
+        color: DUST_COLORS[Math.floor(Math.random() * DUST_COLORS.length)],
       });
     }
   }, [explosionTrigger]);
@@ -157,25 +214,49 @@ export default function HeartParticles() {
 
       ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-      // Continuous gentle hearts while gesture held
+      // Continuous heart trail at hand position (TikTok-style)
       if (gestureRef.current) {
         continuousTimerRef.current += dt;
-        if (continuousTimerRef.current > 0.4) {
+        if (continuousTimerRef.current > 0.25) {
           continuousTimerRef.current = 0;
-          for (let i = 0; i < 2; i++) {
+
+          // Spawn hearts at the hand position
+          const hx = heartPosRef.current.x * canvas.width;
+          const hy = heartPosRef.current.y * canvas.height;
+
+          for (let i = 0; i < 3; i++) {
+            const angle = -Math.PI / 2 + (Math.random() - 0.5) * 1.2;
+            const speed = 1 + Math.random() * 2;
+            const life = 3 + Math.random() * 2;
             heartsRef.current.push({
-              x: canvas.width * 0.2 + Math.random() * canvas.width * 0.6,
-              y: canvas.height + 20,
-              vx: (Math.random() - 0.5) * 1,
-              vy: -(1.5 + Math.random() * 2),
-              size: 10 + Math.random() * 18,
+              x: hx + (Math.random() - 0.5) * 40,
+              y: hy + (Math.random() - 0.5) * 40,
+              vx: Math.cos(angle) * speed * 0.5,
+              vy: Math.sin(angle) * speed - 1,
+              size: 10 + Math.random() * 20,
               color: COLORS[Math.floor(Math.random() * COLORS.length)],
               opacity: 0.5 + Math.random() * 0.3,
               rotation: (Math.random() - 0.5) * 0.3,
-              rotSpeed: (Math.random() - 0.5) * 0.01,
-              life: 4 + Math.random() * 3,
-              maxLife: 4 + Math.random() * 3,
-              glow: 4 + Math.random() * 8,
+              rotSpeed: (Math.random() - 0.5) * 0.015,
+              life,
+              maxLife: life,
+              glow: 4 + Math.random() * 10,
+            });
+          }
+
+          // Light dust trail
+          for (let i = 0; i < 4; i++) {
+            const life = 1.5 + Math.random() * 2;
+            dustRef.current.push({
+              x: hx + (Math.random() - 0.5) * 60,
+              y: hy + (Math.random() - 0.5) * 60,
+              vx: (Math.random() - 0.5) * 0.5,
+              vy: -(0.3 + Math.random() * 0.8),
+              size: 2 + Math.random() * 4,
+              opacity: 0.2 + Math.random() * 0.25,
+              life,
+              maxLife: life,
+              color: DUST_COLORS[Math.floor(Math.random() * DUST_COLORS.length)],
             });
           }
         }
@@ -191,13 +272,14 @@ export default function HeartParticles() {
 
         h.vx *= 0.997;
         h.vy *= 0.997;
+        h.vy -= 0.005; // slight upward drift
         h.x += h.vx * 60 * dt;
         h.y += h.vy * 60 * dt;
         h.rotation += h.rotSpeed;
 
         const lifeRatio = h.life / h.maxLife;
-        const fadeIn = Math.min(1, (h.maxLife - h.life) / 0.25);
-        const fadeOut = lifeRatio < 0.25 ? lifeRatio / 0.25 : 1;
+        const fadeIn = Math.min(1, (h.maxLife - h.life) / 0.2);
+        const fadeOut = lifeRatio < 0.2 ? lifeRatio / 0.2 : 1;
         const alpha = h.opacity * fadeIn * fadeOut;
 
         if (alpha > 0.01) {
@@ -222,8 +304,8 @@ export default function HeartParticles() {
         s.life -= dt;
         if (s.life <= 0) continue;
 
-        s.vx *= 0.96;
-        s.vy *= 0.96;
+        s.vx *= 0.95;
+        s.vy *= 0.95;
         s.x += s.vx * 60 * dt;
         s.y += s.vy * 60 * dt;
 
@@ -235,7 +317,7 @@ export default function HeartParticles() {
           ctx.globalAlpha = alpha;
           ctx.fillStyle = s.color;
           ctx.shadowColor = s.color;
-          ctx.shadowBlur = s.size * 4;
+          ctx.shadowBlur = s.size * 5;
           ctx.beginPath();
           ctx.arc(s.x, s.y, s.size * lifeRatio, 0, Math.PI * 2);
           ctx.fill();
@@ -245,12 +327,45 @@ export default function HeartParticles() {
       }
       sparksRef.current = aliveSparks;
 
-      // Cap particle count
-      if (heartsRef.current.length > 120) {
-        heartsRef.current = heartsRef.current.slice(-100);
+      // Update & draw dust
+      const aliveDust: Dust[] = [];
+      for (const d of dustRef.current) {
+        d.life -= dt;
+        if (d.life <= 0) continue;
+
+        d.x += d.vx * 60 * dt;
+        d.y += d.vy * 60 * dt;
+        d.vx += (Math.random() - 0.5) * 0.02; // gentle drift
+
+        const lifeRatio = d.life / d.maxLife;
+        const fadeIn = Math.min(1, (d.maxLife - d.life) / 0.3);
+        const fadeOut = lifeRatio < 0.3 ? lifeRatio / 0.3 : 1;
+        const alpha = d.opacity * fadeIn * fadeOut;
+
+        if (alpha > 0.005) {
+          ctx.save();
+          ctx.globalAlpha = alpha;
+          ctx.fillStyle = d.color;
+          ctx.shadowColor = d.color;
+          ctx.shadowBlur = d.size * 3;
+          ctx.beginPath();
+          ctx.arc(d.x, d.y, d.size * (0.7 + 0.3 * lifeRatio), 0, Math.PI * 2);
+          ctx.fill();
+          ctx.restore();
+        }
+        aliveDust.push(d);
       }
-      if (sparksRef.current.length > 60) {
-        sparksRef.current = sparksRef.current.slice(-50);
+      dustRef.current = aliveDust;
+
+      // Cap particle counts
+      if (heartsRef.current.length > 150) {
+        heartsRef.current = heartsRef.current.slice(-120);
+      }
+      if (sparksRef.current.length > 80) {
+        sparksRef.current = sparksRef.current.slice(-60);
+      }
+      if (dustRef.current.length > 60) {
+        dustRef.current = dustRef.current.slice(-45);
       }
 
       animRef.current = requestAnimationFrame(animate);

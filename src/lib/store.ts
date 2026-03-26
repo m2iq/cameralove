@@ -9,10 +9,22 @@ interface AppState {
   gestureDetected: boolean;
   gestureType: GestureType;
   confidence: number;
-  setGesture: (detected: boolean, type: GestureType, confidence: number) => void;
+  /** Normalized heart position (0-1, in mirrored canvas space) */
+  heartX: number;
+  heartY: number;
+  setGesture: (
+    detected: boolean,
+    type: GestureType,
+    confidence: number,
+    hx: number,
+    hy: number
+  ) => void;
 
   explosionTrigger: number;
-  triggerExplosion: () => void;
+  /** Screen-pixel position of the explosion origin */
+  explosionX: number;
+  explosionY: number;
+  triggerExplosion: (x: number, y: number) => void;
 
   cooldownActive: boolean;
   setCooldown: (active: boolean) => void;
@@ -32,12 +44,20 @@ export const useAppStore = create<AppState>((set) => ({
   gestureDetected: false,
   gestureType: "none",
   confidence: 0,
-  setGesture: (detected, type, confidence) =>
-    set({ gestureDetected: detected, gestureType: type, confidence }),
+  heartX: 0.5,
+  heartY: 0.5,
+  setGesture: (detected, type, confidence, hx, hy) =>
+    set({ gestureDetected: detected, gestureType: type, confidence, heartX: hx, heartY: hy }),
 
   explosionTrigger: 0,
-  triggerExplosion: () =>
-    set((state) => ({ explosionTrigger: state.explosionTrigger + 1 })),
+  explosionX: 0,
+  explosionY: 0,
+  triggerExplosion: (x, y) =>
+    set((state) => ({
+      explosionTrigger: state.explosionTrigger + 1,
+      explosionX: x,
+      explosionY: y,
+    })),
 
   cooldownActive: false,
   setCooldown: (active) => set({ cooldownActive: active }),
@@ -56,5 +76,7 @@ export const useAppStore = create<AppState>((set) => ({
       confidence: 0,
       capturedPhoto: null,
       cooldownActive: false,
+      heartX: 0.5,
+      heartY: 0.5,
     }),
 }));
