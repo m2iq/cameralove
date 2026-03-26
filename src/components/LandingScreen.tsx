@@ -1,6 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
+import { Heart, Camera, Sparkles, ImageIcon } from "lucide-react";
 
 interface LandingScreenProps {
   onStart: () => void;
@@ -9,7 +10,7 @@ interface LandingScreenProps {
 export default function LandingScreen({ onStart }: LandingScreenProps) {
   return (
     <div className="relative flex flex-col items-center justify-center h-screen w-screen overflow-hidden">
-      {/* Multi-layer animated gradient background */}
+      {/* Animated gradient background */}
       <div className="absolute inset-0">
         <div
           className="absolute inset-0"
@@ -18,7 +19,6 @@ export default function LandingScreen({ onStart }: LandingScreenProps) {
               "radial-gradient(ellipse at 20% 50%, rgba(225,29,72,0.18) 0%, transparent 50%), " +
               "radial-gradient(ellipse at 80% 20%, rgba(168,85,247,0.14) 0%, transparent 50%), " +
               "radial-gradient(ellipse at 50% 80%, rgba(244,63,94,0.12) 0%, transparent 50%), " +
-              "radial-gradient(ellipse at 70% 70%, rgba(192,132,252,0.08) 0%, transparent 40%), " +
               "#0a0a0a",
           }}
         />
@@ -29,7 +29,6 @@ export default function LandingScreen({ onStart }: LandingScreenProps) {
               "radial-gradient(ellipse at 30% 40%, rgba(225,29,72,0.15) 0%, transparent 60%)",
               "radial-gradient(ellipse at 70% 60%, rgba(168,85,247,0.15) 0%, transparent 60%)",
               "radial-gradient(ellipse at 40% 70%, rgba(244,63,94,0.15) 0%, transparent 60%)",
-              "radial-gradient(ellipse at 60% 30%, rgba(192,132,252,0.12) 0%, transparent 60%)",
               "radial-gradient(ellipse at 30% 40%, rgba(225,29,72,0.15) 0%, transparent 60%)",
             ],
           }}
@@ -51,15 +50,19 @@ export default function LandingScreen({ onStart }: LandingScreenProps) {
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 1.2, ease: [0.22, 1, 0.36, 1] }}
       >
-        {/* Animated heart icon */}
+        {/* Heart icon */}
         <motion.div
           className="relative"
           initial={{ scale: 0, rotate: -20 }}
           animate={{ scale: 1, rotate: 0 }}
-          transition={{ delay: 0.2, duration: 0.8, type: "spring", stiffness: 200 }}
+          transition={{
+            delay: 0.2,
+            duration: 0.8,
+            type: "spring",
+            stiffness: 200,
+          }}
         >
-          <motion.span
-            className="text-6xl sm:text-7xl md:text-8xl block"
+          <motion.div
             animate={{
               scale: [1, 1.15, 1],
               filter: [
@@ -70,9 +73,8 @@ export default function LandingScreen({ onStart }: LandingScreenProps) {
             }}
             transition={{ duration: 2.5, repeat: Infinity, ease: "easeInOut" }}
           >
-            💕
-          </motion.span>
-          {/* Glow ring */}
+            <Heart className="w-16 h-16 sm:w-20 sm:h-20 text-rose-500 fill-rose-500" />
+          </motion.div>
           <motion.div
             className="absolute inset-0 rounded-full"
             animate={{
@@ -93,16 +95,9 @@ export default function LandingScreen({ onStart }: LandingScreenProps) {
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.4, duration: 1, ease: [0.22, 1, 0.36, 1] }}
         >
-          <span className="gradient-text">Make a Heart</span>
+          <span className="gradient-text">اصنع قلبًا</span>
           <br />
-          <span className="text-white/90">With Your Hands</span>
-          <motion.span
-            className="inline-block ml-2 sm:ml-3"
-            animate={{ scale: [1, 1.3, 1] }}
-            transition={{ duration: 1.5, repeat: Infinity }}
-          >
-            ❤️
-          </motion.span>
+          <span className="text-white/90">بيديك</span>
         </motion.h1>
 
         {/* Subtitle */}
@@ -112,9 +107,11 @@ export default function LandingScreen({ onStart }: LandingScreenProps) {
           animate={{ opacity: 1 }}
           transition={{ delay: 0.7, duration: 0.8 }}
         >
-          Use your camera to create a heart gesture and watch the magic unfold.
+          شكّل قلبًا بيديك أمام الكاميرا وشاهد السحر
           <br className="hidden sm:block" />
-          <span className="text-white/25">Supports both classic & Korean finger hearts.</span>
+          <span className="text-white/25">
+            يدعم القلب الكلاسيكي والقلب الكوري
+          </span>
         </motion.p>
 
         {/* CTA Button */}
@@ -135,31 +132,32 @@ export default function LandingScreen({ onStart }: LandingScreenProps) {
           />
           <div className="absolute inset-0 shimmer rounded-full" />
           <span className="relative z-10 flex items-center gap-2.5">
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
-            </svg>
-            Start Camera
+            <Camera className="w-5 h-5" />
+            تشغيل الكاميرا
           </span>
         </motion.button>
 
-        {/* Features pills */}
+        {/* Feature pills */}
         <motion.div
           className="flex flex-wrap justify-center gap-3 mt-4"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 1.3 }}
         >
-          {["✌️ Korean Heart", "🤲 Classic Heart", "📸 Photo Capture", "✨ 3D Effects"].map(
-            (label) => (
-              <span
-                key={label}
-                className="glass rounded-full px-4 py-1.5 text-xs text-white/40 font-medium"
-              >
-                {label}
-              </span>
-            )
-          )}
+          {[
+            { icon: Heart, label: "القلب الكوري" },
+            { icon: Heart, label: "القلب الكلاسيكي" },
+            { icon: ImageIcon, label: "التقاط صور" },
+            { icon: Sparkles, label: "تأثيرات بصرية" },
+          ].map(({ icon: Icon, label }) => (
+            <span
+              key={label}
+              className="glass rounded-full px-4 py-1.5 text-xs text-white/40 font-medium flex items-center gap-1.5"
+            >
+              <Icon className="w-3 h-3" />
+              {label}
+            </span>
+          ))}
         </motion.div>
 
         {/* Bottom hint */}
@@ -170,14 +168,12 @@ export default function LandingScreen({ onStart }: LandingScreenProps) {
           transition={{ delay: 1.5 }}
         >
           <div className="w-2 h-2 rounded-full bg-emerald-400/50 animate-pulse" />
-          Camera access required
+          يتطلب الوصول إلى الكاميرا
         </motion.div>
       </motion.div>
 
       {/* Bottom gradient fade */}
       <div className="absolute bottom-0 left-0 right-0 h-40 bg-gradient-to-t from-[#0a0a0a] to-transparent pointer-events-none z-10" />
-      {/* Top gradient fade */}
-      <div className="absolute top-0 left-0 right-0 h-24 bg-gradient-to-b from-[#0a0a0a]/50 to-transparent pointer-events-none z-10" />
     </div>
   );
 }

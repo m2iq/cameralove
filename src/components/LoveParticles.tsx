@@ -38,7 +38,9 @@ export default function LoveParticles() {
       opacity: 0.08 + Math.random() * 0.2,
       pulse: Math.random() * Math.PI * 2,
       pulseSpeed: 0.008 + Math.random() * 0.02,
-      type: Math.random() < 0.3 ? "glow" : Math.random() < 0.5 ? "dust" : "dot",
+      type: (
+        Math.random() < 0.3 ? "glow" : Math.random() < 0.5 ? "dust" : "dot"
+      ) as Particle["type"],
       hue: 330 + Math.random() * 40,
     }));
   }, []);
@@ -78,8 +80,14 @@ export default function LoveParticles() {
         if (p.type === "glow") {
           const r = p.size * (active ? 8 : 5);
           const grad = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, r);
-          grad.addColorStop(0, `hsla(${p.hue}, 80%, 70%, ${currentOpacity})`);
-          grad.addColorStop(0.5, `hsla(${p.hue}, 70%, 50%, ${currentOpacity * 0.3})`);
+          grad.addColorStop(
+            0,
+            `hsla(${p.hue}, 80%, 70%, ${currentOpacity})`
+          );
+          grad.addColorStop(
+            0.5,
+            `hsla(${p.hue}, 70%, 50%, ${currentOpacity * 0.3})`
+          );
           grad.addColorStop(1, `hsla(${p.hue}, 60%, 40%, 0)`);
           ctx.fillStyle = grad;
           ctx.beginPath();
